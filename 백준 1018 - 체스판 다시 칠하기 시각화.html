@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>백준 1018 - 체스판 다시 칠하기 시각화</title>
+    <style>
+        body {
+            font-family: 'Pretendard', 'Noto Sans KR', sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        h1, h2 {
+            color: #212529;
+            text-align: center;
+        }
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .board-container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .info-container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 400px;
+        }
+        .board {
+            display: grid;
+            grid-template-columns: repeat(8, 40px);
+            grid-template-rows: repeat(8, 40px);
+            gap: 1px;
+            margin: 20px auto;
+        }
+        .cell {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .white {
+            background-color: #f8f9fa;
+            color: #212529;
+        }
+        .black {
+            background-color: #343a40;
+            color: white;
+        }
+        .highlight {
+            border: 2px solid #fa5252;
+        }
+        .current-check {
+            border: 2px solid #4c6ef5;
+        }
+        .wrong {
+            position: relative;
+        }
+        .wrong::after {
+            content: "✗";
+            position: absolute;
+            color: #fa5252;
+            font-size: 24px;
+        }
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin: 20px auto;
+            max-width: 400px;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #4c6ef5;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #364fc7;
+        }
+        button:disabled {
+            background-color: #adb5bd;
+            cursor: not-allowed;
+        }
+        .input-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .log {
+            background-color: #f1f3f5;
+            padding: 10px;
+            border-radius: 5px;
+            height: 200px;
+            overflow-y: auto;
+            margin-top: 10px;
+            border: 1px solid #dee2e6;
+            font-family: monospace;
+        }
+        .log p {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+        .highlight-text {
+            color: #4c6ef5;
+            font-weight: bold;
+        }
+        .result-text {
+            color: #fa5252;
+            font-weight: bold;
+        }
+        .progress-container {
+            width: 100%;
+            background-color: #e9ecef;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .progress-bar {
+            height: 20px;
+            background-color: #4c6ef5;
+            border-radius: 5px;
+            width: 0%;
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+        }
+        .pattern-example {
+            display: grid;
+            grid-template-columns: repeat(4, 20px);
+            grid-template-rows: repeat(4, 20px);
+            gap: 1px;
+            margin: 10px 0;
+        }
+        .small-cell {
+            width: 20px;
+            height: 20px;
+        }
+        .pattern-container {
+            display: flex;
+            justify-content: space-around;
+            margin: 15px 0;
+        }
+        .pattern-box {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>백준 1018 - 체스판 다시 칠하기 시각화</h1>
+    
+    <div class="container">
+        <div class="board-container">
+            <h2>체스판</h2>
+            <div class="controls">
+                <div class="input-grid">
+                    <label for="rows">행 개수 (N):</label>
+                    <input type="number" id="rows" min="8" max="20" value="8">
+                    
+                    <label for="cols">열 개수 (M):</label>
+                    <input type="number" id="cols" min="8" max="20" value="8">
+                </div>
+                <button id="generateBoard">무작위 보드 생성</button>
+                <button id="toggleCell">셀 색상 변경 (클릭으로도 가능)</button>
+                <button id="runAlgorithm">알고리즘 실행</button>
+                <button id="nextStep" disabled>다음 단계</button>
+                <button id="autoRun">자동 실행</button>
+                <button id="reset" disabled>초기화</button>
+                
+                <div class="progress-container">
+                    <div class="progress-bar" id="progressBar">0%</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="info-container">
+            <h2>실행 정보</h2>
+            <div class="pattern-container">
+                <div class="pattern-box">
+                    <p>패턴 1 (W로 시작)</p>
+                    <div class="pattern-example" id="pattern1">
+                        <!-- JS로 생성 -->
+                    </div>
+                </div>
+                <div class="pattern-box">
+                    <p>패턴 2 (B로 시작)</p>
+                    <div class="pattern-example" id="pattern2">
+                        <!-- JS로 생성 -->
+                    </div>
+                </div>
+            </div>
+            
+            <div>
+                <p>현재 상태: <span id="status">보드를 생성하세요</span></p>
+                <p>최소 다시 칠하기: <span id="minRepaint">-</span></p>
+            </div>
+            
+            <div class="log" id="log">
+                <p>로그가 여기에 표시됩니다.</p>
+            </div>
+        </div>
+    </div>
+    
+    <div id="boardContainer" class="board-container">
+        <div class="board" id="board">
+            <!-- JS로 생성됩니다 -->
+        </div>
+    </div>
+
+    <script>
+        // 변수 선언
+        let board = [];
+        let rows = 8;
+        let cols = 8;
+        let currentStep = 0;
+        let totalSteps = 0;
+        let interval;
+        let running = false;
+        
+        // 패턴 정의
+        const pattern1 = [
+            "WBWBWBWB",
+            "BWBWBWBW",
+            "WBWBWBWB",
+            "BWBWBWBW",
+            "WBWBWBWB",
+            "BWBWBWBW",
+            "WBWBWBWB",
+            "BWBWBWBW"
+        ];
+        
+        const pattern2 = [
+            "BWBWBWBW",
+            "WBWBWBWB",
+            "BWBWBWBW",
+            "WBWBWBWB",
+            "BWBWBWBW",
+            "WBWBWBWB",
+            "BWBWBWBW",
+            "WBWBWBWB"
+        ];
+        
+        // 알고리즘 상태 변수
+        let i = 0, j = 0, r = 0, c = 0;
+        let count1 = 0, count2 = 0;
+        let minRepaint = 64;
+        let algorithmState = "init"; // init, outer1, outer2, inner1, inner2, check, next, finished
+        
+        // DOM 요소 가져오기
+        const boardElement = document.getElementById('board');
+        const rowsInput = document.getElementById('rows');
+        const colsInput = document.getElementById('cols');
+        const generateButton = document.getElementById('generateBoard');
+        const toggleButton = document.getElementById('toggleCell');
+        const runButton = document.getElementById('runAlgorithm');
+        const nextButton = document.getElementById('nextStep');
+        const autoRunButton = document.getElementById('autoRun');
+        const resetButton = document.getElementById('reset');
+        const statusElement = document.getElementById('status');
+        const minRepaintElement = document.getElementById('minRepaint');
+        const logElement = document.getElementById('log');
+        const progressBar = document.getElementById('progressBar');
+        
+        // 패턴 예제 생성
+        createPatternExample('pattern1', pattern1);
+        createPatternExample('pattern2', pattern2);
+        
+        // 이벤트 리스너 등록
+        generateButton.addEventListener('click', generateRandomBoard);
+        toggleButton.addEventListener('click', toggleSelectedCell);
+        runButton.addEventListener('click', startAlgorithm);
+        nextButton.addEventListener('click', nextStep);
+        autoRunButton.addEventListener('click', toggleAutoRun);
+        resetButton.addEventListener('click', resetAlgorithm);
+        rowsInput.addEventListener('change', updateBoardSize);
+        colsInput.addEventListener('change', updateBoardSize);
+        
+        // 초기 보드 생성
+        updateBoardSize();
+        generateRandomBoard();
+        
+        // 패턴 예제 생성 함수
+        function createPatternExample(elementId, pattern) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = '';
+            
+            // 패턴의 첫 4x4만 보여줌
+            for (let i = 0; i < 4; i++) {
+                for (let j = 0; j < 4; j++) {
+                    const cell = document.createElement('div');
+                    cell.className = `small-cell ${pattern[i][j] === 'W' ? 'white' : 'black'}`;
+                    element.appendChild(cell);
+                }
+            }
+        }
+        
+        // 보드 크기 업데이트
+        function updateBoardSize() {
+            rows = parseInt(rowsInput.value);
+            cols = parseInt(colsInput.value);
+            
+            if (rows < 8) rows = 8;
+            if (cols < 8) cols = 8;
+            
+            rowsInput.value = rows;
+            colsInput.value = cols;
+            
+            generateEmptyBoard();
+            updateBoardDisplay();
+        }
+        
+        // 빈 보드 생성
+        function generateEmptyBoard() {
+            board = [];
+            for (let i = 0; i < rows; i++) {
+                const row = [];
+                for (let j = 0; j < cols; j++) {
+                    row.push('W'); // 기본적으로 흰색
+                }
+                board.push(row);
+            }
+        }
+        
+        // 무작위 보드 생성
+        function generateRandomBoard() {
+            resetAlgorithm();
+            
+            for (let i = 0; i < rows; i++) {
+                for (let j = 0; j < cols; j++) {
+                    board[i][j] = Math.random() < 0.5 ? 'W' : 'B';
+                }
+            }
+            
+            updateBoardDisplay();
+            log('무작위 보드가 생성되었습니다.');
+            statusElement.textContent = '보드가 생성됨. 알고리즘을 실행하세요.';
+        }
+        
+        // 보드 표시 업데이트
+        function updateBoardDisplay() {
+            boardElement.innerHTML = '';
+            boardElement.style.gridTemplateColumns = `repeat(${cols}, 40px)`;
+            boardElement.style.gridTemplateRows = `repeat(${rows}, 40px)`;
+            
+            for (let i = 0; i < rows; i++) {
+                for (let j = 0; j < cols; j++) {
+                    const cell = document.createElement('div');
+                    cell.className = `cell ${board[i][j] === 'W' ? 'white' : 'black'}`;
+                    cell.dataset.row = i;
+                    cell.dataset.col = j;
+                    cell.addEventListener('click', () => toggleCellColor(i, j));
+                    boardElement.appendChild(cell);
+                }
+            }
+        }
+        
+        // 셀 색상 변경 (클릭)
+        function toggleCellColor(row, col) {
+            if (running) return;
+            
+            board[row][col] = board[row][col] === 'W' ? 'B' : 'W';
+            updateBoardDisplay();
+        }
+        
+        // 선택한 셀 색상 변경 (버튼)
+        function toggleSelectedCell() {
+            if (running) return;
+            
+            const highlighted = document.querySelector('.cell.highlight');
+            if (highlighted) {
+                const row = parseInt(highlighted.dataset.row);
+                const col = parseInt(highlighted.dataset.col);
+                toggleCellColor(row, col);
+            } else {
+                log('변경할 셀을 먼저 클릭하세요.');
+            }
+        }
+        
+        // 알고리즘 시작
+        function startAlgorithm() {
+            if (running) return;
+            
+            resetAlgorithm();
+            running = true;
+            
+            // 버튼 상태 업데이트
+            runButton.disabled = true;
+            generateButton.disabled = true;
+            toggleButton.disabled = true;
+            rowsInput.disabled = true;
+            colsInput.disabled = true;
+            nextButton.disabled = false;
+            resetButton.disabled = false;
+            
+            // 알고리즘 초기화
+            i = 0; j = 0; r = 0; c = 0;
+            count1 = 0; count2 = 0;
+            minRepaint = 64;
+            algorithmState = "outer1";
+            
+            // 총 단계 수 계산
+            totalSteps = (rows - 7) * (cols - 7) * 64 + (rows - 7) * (cols - 7);
+            currentStep = 0;
+            
+            log('알고리즘 시작!');
+            statusElement.textContent = '알고리즘 실행 중...';
+            updateProgressBar();
+            
+            nextStep();
+        }
+        
+        // 다음 단계로 진행
+        function nextStep() {
+            if (!running) return;
+            
+            switch (algorithmState) {
+                case "outer1":
+                    highlightChessboard(i, j);
+                    log(`체스판 위치 (${i}, ${j})에서 검사 시작`);
+                    count1 = 0;
+                    count2 = 0;
+                    r = 0;
+                    c = 0;
+                    algorithmState = "inner1";
+                    break;
+                    
+                case "inner1":
+                    highlightCurrentCell(i, j, r, c);
+                    algorithmState = "check";
+                    break;
+                    
+                case "check":
+                    checkCurrentCell();
+                    // 다음 셀로 이동
+                    c++;
+                    if (c >= 8) {
+                        c = 0;
+                        r++;
+                        if (r >= 8) {
+                            algorithmState = "next";
+                        } else {
+                            algorithmState = "inner1";
+                        }
+                    } else {
+                        algorithmState = "inner1";
+                    }
+                    currentStep++;
+                    updateProgressBar();
+                    break;
+                    
+                case "next":
+                    // 이 위치에서의 최소값 계산
+                    const repaint = Math.min(count1, count2);
+                    log(`위치 (${i}, ${j})의 최소 다시 칠하기: ${repaint} (패턴1: ${count1}, 패턴2: ${count2})`);
+                    
+                    // 전체 최소값 갱신
+                    if (repaint < minRepaint) {
+                        minRepaint = repaint;
+                        minRepaintElement.textContent = minRepaint;
+                        log(`새로운 최소값 발견: ${minRepaint}`);
+                    }
+                    
+                    // 다음 위치로 이동
+                    j++;
+                    if (j > cols - 8) {
+                        j = 0;
+                        i++;
+                        if (i > rows - 8) {
+                            algorithmState = "finished";
+                        } else {
+                            algorithmState = "outer1";
+                        }
+                    } else {
+                        algorithmState = "outer1";
+                    }
+                    currentStep++;
+                    updateProgressBar();
+                    break;
+                    
+                case "finished":
+                    log(`알고리즘 완료! 최소 다시 칠하기: ${minRepaint}`);
+                    statusElement.textContent = '알고리즘 완료!';
+                    running = false;
+                    clearInterval(interval);
+                    autoRunButton.textContent = '자동 실행';
+                    
+                    // 하이라이트 제거
+                    clearHighlights();
+                    
+                    // 버튼 상태 업데이트
+                    runButton.disabled = false;
+                    generateButton.disabled = false;
+                    toggleButton.disabled = false;
+                    rowsInput.disabled = false;
+                    colsInput.disabled = false;
+                    nextButton.disabled = true;
+                    
+                    // 결과 표시
+                    minRepaintElement.textContent = minRepaint;
+                    progressBar.style.width = '100%';
+                    progressBar.textContent = '100%';
+                    break;
+            }
+        }
+        
+        // 현재 셀 검사
+        function checkCurrentCell() {
+            const current = board[i + r][j + c];
+            const pattern1Cell = pattern1[r][c];
+            const pattern2Cell = pattern2[r][c];
+            
+            // 패턴1과 비교
+            if (current !== pattern1Cell) {
+                count1++;
+                highlightWrongCell(i + r, j + c, "패턴1");
+            }
+            
+            // 패턴2와 비교
+            if (current !== pattern2Cell) {
+                count2++;
+                highlightWrongCell(i + r, j + c, "패턴2");
+            }
+            
+            log(`셀 (${i+r}, ${j+c}): ${current}, 패턴1: ${pattern1Cell}, 패턴2: ${pattern2Cell}`);
+        }
+        
+        // 자동 실행 토글
+        function toggleAutoRun() {
+            if (!running) return;
+            
+            if (interval) {
+                clearInterval(interval);
+                interval = null;
+                autoRunButton.textContent = '자동 실행';
+            } else {
+                interval = setInterval(() => {
+                    nextStep();
+                    if (algorithmState === "finished") {
+                        clearInterval(interval);
+                        interval = null;
+                        autoRunButton.textContent = '자동 실행';
+                    }
+                }, 100);
+                autoRunButton.textContent = '일시정지';
+            }
+        }
+        
+        // 알고리즘 초기화
+        function resetAlgorithm() {
+            running = false;
+            clearInterval(interval);
+            autoRunButton.textContent = '자동 실행';
+            
+            // 버튼 상태 업데이트
+            runButton.disabled = false;
+            generateButton.disabled = false;
+            toggleButton.disabled = false;
+            rowsInput.disabled = false;
+            colsInput.disabled = false;
+            nextButton.disabled = true;
+            resetButton.disabled = true;
+            
+            // 상태 초기화
+            algorithmState = "init";
+            currentStep = 0;
+            totalSteps = 0;
+            i = 0; j = 0; r = 0; c = 0;
+            count1 = 0; count2 = 0;
+            minRepaint = 64;
+            
+            // UI 초기화
+            statusElement.textContent = '보드가 생성됨. 알고리즘을 실행하세요.';
+            minRepaintElement.textContent = '-';
+            clearHighlights();
+            progressBar.style.width = '0%';
+            progressBar.textContent = '0%';
+            
+            // 로그 초기화
+            logElement.innerHTML = '<p>로그가 여기에 표시됩니다.</p>';
+        }
+        
+        // 8x8 체스판 위치 하이라이트
+        function highlightChessboard(startRow, startCol) {
+            clearHighlights();
+            
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    const cellElement = getCellElement(startRow + r, startCol + c);
+                    if (cellElement) {
+                        cellElement.classList.add('highlight');
+                    }
+                }
+            }
+        }
+        
+        // 현재 검사 중인 셀 하이라이트
+        function highlightCurrentCell(startRow, startCol, r, c) {
+            // 하이라이트 클래스 제거
+            const cells = document.querySelectorAll('.current-check');
+            cells.forEach(cell => cell.classList.remove('current-check'));
+            
+            // 현재 셀 하이라이트
+            const cellElement = getCellElement(startRow + r, startCol + c);
+            if (cellElement) {
+                cellElement.classList.add('current-check');
+            }
+        }
+        
+        // 잘못된 셀 하이라이트
+        function highlightWrongCell(row, col, pattern) {
+            const cellElement = getCellElement(row, col);
+            if (cellElement) {
+                cellElement.classList.add('wrong');
+                setTimeout(() => {
+                    cellElement.classList.remove('wrong');
+                }, 300);
+            }
+        }
+        
+        // 모든 하이라이트 제거
+        function clearHighlights() {
+            const cells = document.querySelectorAll('.highlight, .current-check, .wrong');
+            cells.forEach(cell => {
+                cell.classList.remove('highlight');
+                cell.classList.remove('current-check');
+                cell.classList.remove('wrong');
+            });
+        }
+        
+        // 셀 엘리먼트 가져오기
+        function getCellElement(row, col) {
+            return document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
+        }
+        
+        // 로그 추가
+        function log(message) {
+            const p = document.createElement('p');
+            p.innerHTML = message;
+            logElement.appendChild(p);
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+        
+        // 진행률 표시줄 업데이트
+        function updateProgressBar() {
+            if (totalSteps === 0) return;
+            
+            const progress = Math.min(100, Math.round((currentStep / totalSteps) * 100));
+            progressBar.style.width = `${progress}%`;
+            progressBar.textContent = `${progress}%`;
+        }
+    </script>
+</body>
+</html>
